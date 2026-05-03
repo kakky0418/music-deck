@@ -1,0 +1,17 @@
+# SwiftPM / local builds
+.DS_Store
+.build/
+.build-*/
+.swiftpm/
+
+# Xcode / macOS local state
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
