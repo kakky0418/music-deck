@@ -3,7 +3,7 @@ import Testing
 
 @Suite("再生中表示状態")
 struct NowPlayingDisplayStateTests {
-    @Test("サービス切替だけでは表示中の曲を変えない")
+    @Test("サービス切替だけでは再生中表示を変えない")
     func serviceSelectionDoesNotReplaceDisplayedTrack() {
         var state = NowPlayingDisplayState(initialService: .youtubeMusic)
         let snapshot = NowPlayingSnapshot(title: "ふわふわ時間", artist: "桜高軽音部", artworkURL: "https://example.com/art.jpg")
@@ -15,7 +15,7 @@ struct NowPlayingDisplayStateTests {
         #expect(state.displayedSnapshot == snapshot)
     }
 
-    @Test("新しい曲情報を取得したサービスへ表示を切り替える")
+    @Test("曲情報を取得したサービスへ再生中表示を切り替える")
     func displayFollowsLatestTrackSnapshot() {
         var state = NowPlayingDisplayState(initialService: .youtubeMusic)
         let youtubeSnapshot = NowPlayingSnapshot(title: "ふわふわ時間", artist: "桜高軽音部", artworkURL: "")
@@ -37,5 +37,16 @@ struct NowPlayingDisplayStateTests {
         #expect(state.displayedService == .spotify)
         #expect(state.displayedSnapshot == nil)
     }
-}
 
+    @Test("曲情報が取れなくなったサービスは古い表示を消す")
+    func clearingSnapshotRemovesStaleTrack() {
+        var state = NowPlayingDisplayState(initialService: .amazonMusic)
+        let snapshot = NowPlayingSnapshot(title: "IRIS OUT", artist: "米津玄師", artworkURL: "")
+
+        state.update(snapshot: snapshot, for: .amazonMusic)
+        state.clearSnapshot(for: .amazonMusic)
+
+        #expect(state.displayedService == .amazonMusic)
+        #expect(state.displayedSnapshot == nil)
+    }
+}
