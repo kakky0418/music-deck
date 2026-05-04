@@ -113,6 +113,7 @@ final class ShellSidebarView: NSView {
     func apply(
         theme: ShellTheme,
         selectedService: MusicService,
+        nowPlayingService: MusicService,
         nowPlaying: NowPlayingSnapshot?,
         artwork: NSImage?
     ) {
@@ -127,17 +128,34 @@ final class ShellSidebarView: NSView {
             serviceButtons[service]?.apply(theme: theme, selected: service == selectedService)
         }
 
-        nowPlayingPanel.layer?.backgroundColor = theme.elevatedSurface.cgColor
-        nowPlayingPanel.layer?.borderColor = theme.border.cgColor
+        let hasNowPlaying = nowPlaying != nil
+        nowPlayingPanel.layer?.backgroundColor = (hasNowPlaying
+            ? theme.elevatedSurface
+            : NSColor.white.withAlphaComponent(0.12)
+        ).cgColor
+        nowPlayingPanel.layer?.borderColor = (hasNowPlaying
+            ? theme.border
+            : NSColor.white.withAlphaComponent(0.20)
+        ).cgColor
         nowPlayingTitleLabel.textColor = theme.primaryText
         nowPlayingArtistLabel.textColor = theme.secondaryText
 
-        nowPlayingTitleLabel.stringValue = nonEmpty(nowPlaying?.title) ?? selectedService.title
-        nowPlayingArtistLabel.stringValue = nonEmpty(nowPlaying?.artist) ?? "再生待機中"
-        artworkView.image = artwork ?? servicePlaceholderImage(for: selectedService)
+        if let nowPlaying {
+            nowPlayingTitleLabel.stringValue = nonEmpty(nowPlaying.title) ?? nowPlayingService.title
+            nowPlayingArtistLabel.stringValue = nonEmpty(nowPlaying.artist) ?? nowPlayingService.title
+            artworkView.image = artwork ?? servicePlaceholderImage(for: nowPlayingService)
+        } else {
+            nowPlayingTitleLabel.stringValue = "再生待機中"
+            nowPlayingArtistLabel.stringValue = "曲を再生すると表示されます"
+            artworkView.image = standbyPlaceholderImage()
+        }
 
         for case let button as ShellControlButton in controlsStack.arrangedSubviews {
             button.apply(theme: theme)
+            if !hasNowPlaying {
+                button.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.10).cgColor
+                button.contentTintColor = NSColor.white.withAlphaComponent(0.82)
+            }
         }
     }
 
@@ -282,6 +300,26 @@ final class ShellSidebarView: NSView {
     }
 
     private func servicePlaceholderImage(for service: MusicService) -> NSImage {
+        placeholderImage(symbolName: service.symbolName, accessibilityDescription: service.title)
+    }
+
+    private func standbyPlaceholderImage() -> NSImage {
+        let image = NSImage(size: NSSize(width: 96, height: 96))
+        image.lockFocus()
+        let rect = NSRect(x: 0, y: 0, width: 96, height: 96)
+        NSColor.white.withAlphaComponent(0.16).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: 18, yRadius: 18).fill()
+        NSColor.white.withAlphaComponent(0.08).setFill()
+        NSBezierPath(ovalIn: NSRect(x: 42, y: -20, width: 76, height: 76)).fill()
+        let symbol = NSImage(systemSymbolName: "music.note", accessibilityDescription: "再生待機中")
+        symbol?.isTemplate = true
+        NSColor.white.withAlphaComponent(0.82).set()
+        symbol?.draw(in: NSRect(x: 28, y: 28, width: 40, height: 40))
+        image.unlockFocus()
+        return image
+    }
+
+    private func placeholderImage(symbolName: String, accessibilityDescription: String) -> NSImage {
         let image = NSImage(size: NSSize(width: 96, height: 96))
         image.lockFocus()
         let rect = NSRect(x: 0, y: 0, width: 96, height: 96)
@@ -289,7 +327,7 @@ final class ShellSidebarView: NSView {
         NSBezierPath(roundedRect: rect, xRadius: 18, yRadius: 18).fill()
         theme.secondaryAccent.withAlphaComponent(0.45).setFill()
         NSBezierPath(ovalIn: NSRect(x: 42, y: -20, width: 76, height: 76)).fill()
-        let symbol = NSImage(systemSymbolName: service.symbolName, accessibilityDescription: service.title)
+        let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityDescription)
         symbol?.isTemplate = true
         NSColor.white.withAlphaComponent(0.92).set()
         symbol?.draw(in: NSRect(x: 28, y: 28, width: 40, height: 40))

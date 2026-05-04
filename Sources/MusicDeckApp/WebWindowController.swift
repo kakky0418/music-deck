@@ -300,6 +300,10 @@ final class WebWindowController: NSWindowController, WKNavigationDelegate, WKUID
         nowPlayingDisplayState.displayedSnapshot
     }
 
+    func currentNowPlayingService() -> MusicService {
+        nowPlayingDisplayState.displayedService
+    }
+
     func currentArtwork() -> NSImage? {
         artworkImages[nowPlayingDisplayState.displayedService]
     }
@@ -311,6 +315,7 @@ final class WebWindowController: NSWindowController, WKNavigationDelegate, WKUID
         sidebarView.apply(
             theme: theme,
             selectedService: selectedService,
+            nowPlayingService: nowPlayingDisplayState.displayedService,
             nowPlaying: nowPlayingDisplayState.displayedSnapshot,
             artwork: artworkImages[nowPlayingDisplayState.displayedService]
         )
@@ -344,9 +349,11 @@ final class WebWindowController: NSWindowController, WKNavigationDelegate, WKUID
             let json = result as? String,
             let data = json.data(using: .utf8),
             let snapshot = try? JSONDecoder().decode(NowPlayingSnapshot.self, from: data),
-            snapshot.hasDisplayableContent
+            isUsableNowPlayingSnapshot(snapshot, for: service)
         else {
-            if service == selectedService {
+            let wasDisplayedService = service == nowPlayingDisplayState.displayedService
+            nowPlayingDisplayState.clearSnapshot(for: service)
+            if service == selectedService || wasDisplayedService {
                 applyShellTheme()
             }
             return
@@ -358,6 +365,40 @@ final class WebWindowController: NSWindowController, WKNavigationDelegate, WKUID
         }
 
         await refreshArtworkIfNeeded(for: service, snapshot: snapshot)
+    }
+
+    private func isUsableNowPlayingSnapshot(_ snapshot: NowPlayingSnapshot, for service: MusicService) -> Bool {
+        guard snapshot.hasDisplayableContent else {
+            return false
+        }
+
+        let title = normalizedNowPlayingText(snapshot.title)
+        let artist = normalizedNowPlayingText(snapshot.artist)
+        guard !title.isEmpty || !artist.isEmpty else {
+            return false
+        }
+
+        if title == service.title && (artist.isEmpty || artist == service.title) {
+            return false
+        }
+
+        let placeholderArtists: Set<String> = ["再生", "停止", "一時停止", "サインイン"]
+        if title == service.title && placeholderArtists.contains(artist) {
+            return false
+        }
+        if title.isEmpty && placeholderArtists.contains(artist) {
+            return false
+        }
+
+        return true
+    }
+
+    private func normalizedNowPlayingText(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\u{00a0}", with: " ")
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     private func refreshArtworkIfNeeded(for service: MusicService, snapshot: NowPlayingSnapshot) async {

@@ -169,13 +169,19 @@ private final class StatusPopoverViewController: NSViewController {
         launchAtLoginButton.state = loginItemController.settings.launchAtLogin ? .on : .off
         let theme = webWindowController.currentShellTheme()
         let nowPlaying = webWindowController.currentNowPlaying()
+        let nowPlayingService = webWindowController.currentNowPlayingService()
         rootStack.layer?.backgroundColor = theme.backgroundBottom.shellMixed(with: theme.accent, fraction: 0.16).cgColor
         titleLabel.textColor = theme.primaryText
         subtitleLabel.textColor = theme.secondaryText
         launchAtLoginButton.contentTintColor = theme.secondaryText
         artworkView.image = webWindowController.currentArtwork() ?? placeholderImage(theme: theme)
-        titleLabel.stringValue = nonEmpty(nowPlaying?.title) ?? webWindowController.activeService.title
-        subtitleLabel.stringValue = nonEmpty(nowPlaying?.artist) ?? "MusicDeck"
+        if let nowPlaying {
+            titleLabel.stringValue = nonEmpty(nowPlaying.title) ?? nowPlayingService.title
+            subtitleLabel.stringValue = nonEmpty(nowPlaying.artist) ?? nowPlayingService.title
+        } else {
+            titleLabel.stringValue = "再生待機中"
+            subtitleLabel.stringValue = "曲を再生すると表示されます"
+        }
 
         for button in themedButtons {
             button.layer?.backgroundColor = theme.surface.cgColor
@@ -226,7 +232,7 @@ private final class StatusPopoverViewController: NSViewController {
         NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: 96, height: 96), xRadius: 18, yRadius: 18).fill()
         theme.secondaryAccent.withAlphaComponent(0.46).setFill()
         NSBezierPath(ovalIn: NSRect(x: 38, y: -18, width: 80, height: 80)).fill()
-        let symbol = NSImage(systemSymbolName: webWindowController.activeService.symbolName, accessibilityDescription: nil)
+        let symbol = NSImage(systemSymbolName: "music.note", accessibilityDescription: nil)
         symbol?.isTemplate = true
         NSColor.white.withAlphaComponent(0.92).set()
         symbol?.draw(in: NSRect(x: 28, y: 28, width: 40, height: 40))
