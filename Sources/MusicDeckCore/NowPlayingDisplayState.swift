@@ -28,5 +28,11 @@ public struct NowPlayingDisplayState: Equatable, Sendable {
             displayedService = service
         }
     }
-}
 
+    public mutating func clearSnapshot(for service: MusicService) {
+        snapshots.removeValue(forKey: service)
+        if displayedService == service {
+            displayedService = selectedService
+        }
+    }
+}
